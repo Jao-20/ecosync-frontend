@@ -1,11 +1,13 @@
+export type Indicador = { valor: number | null; variacao: number | null }
+
 export type DadosDashboard = {
   resumo: {
-    consumoHoje: { valor: number; variacao: number }
-    custoMes: { valor: number; variacao: number }
-    economiaMes: { valor: number; variacao: number }
+    consumoHoje: Indicador
+    custoMes: Indicador
+    economiaMes: Indicador
   }
-  consumoSemana: { dia: string; real: number; previsto: number }[]
-  consumoPorTipo: { nome: string; valor: number }[]
-  consumoPorComodo: { comodo: string; kwh: number }[]
-  recomendacao: { titulo: string; texto: string }
+  consumoSemana: { dia: string; real: number | null; previsto: number | null }[]
+  consumoPorTipo: { nome: string; valor: number }[] | null
+  consumoPorComodo: { comodo: string; kwh: number }[] | null
+  recomendacao: { titulo: string; texto: string } | null
 }

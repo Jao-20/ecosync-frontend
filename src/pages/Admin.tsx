@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
+import Comodos from '../components/Comodos'
+import { mensagemDe } from '../services/api'
 import {
   atualizarDispositivo,
   criarDispositivo,
@@ -13,12 +15,14 @@ const tiposAdmin: { valor: Dispositivo['tipo']; rotulo: string }[] = [
   { valor: 'luz', rotulo: 'Iluminação' },
   { valor: 'climatizacao', rotulo: 'Climatização' },
   { valor: 'eletro', rotulo: 'Eletrodomésticos' },
+  { valor: 'entretenimento', rotulo: 'Entretenimento' },
 ]
 
 const nomesTipo = {
   luz: 'Iluminação',
   climatizacao: 'Climatização',
   eletro: 'Eletrodomésticos',
+  entretenimento: 'Entretenimento',
 }
 
 function Admin() {
@@ -27,19 +31,32 @@ function Admin() {
   const [nome, setNome] = useState('')
   const [comodo, setComodo] = useState('')
   const [tipo, setTipo] = useState<Dispositivo['tipo']>('luz')
-  const [consumo, setConsumo] = useState('')
+  const [potencia, setPotencia] = useState('')
   const [erro, setErro] = useState('')
+  const [carregando, setCarregando] = useState(true)
+  const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
-    listarDispositivos().then(setLista)
+    listarDispositivos()
+      .then(setLista)
+      .catch((e: unknown) => setErro(mensagemDe(e)))
+      .finally(() => setCarregando(false))
   }, [])
+
+  async function recarregar() {
+    try {
+      setLista(await listarDispositivos())
+    } catch (e) {
+      setErro(mensagemDe(e))
+    }
+  }
 
   function limpar() {
     setEditandoId(null)
     setNome('')
     setComodo('')
     setTipo('luz')
-    setConsumo('')
+    setPotencia('')
     setErro('')
   }
 
@@ -48,54 +65,51 @@ function Admin() {
     setNome(d.nome)
     setComodo(d.comodo)
     setTipo(d.tipo)
-    setConsumo(String(d.consumo).replace('.', ','))
+    setPotencia(String(d.potenciaWatts).replace('.', ','))
     setErro('')
   }
 
   async function excluir(id: number) {
     if (!window.confirm('Excluir este dispositivo?')) return
-    await removerDispositivo(id)
-    setLista(await listarDispositivos())
-    if (editandoId === id) limpar()
+    try {
+      await removerDispositivo(id)
+      setLista(await listarDispositivos())
+      if (editandoId === id) limpar()
+    } catch (e) {
+      setErro(mensagemDe(e))
+    }
   }
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
 
-    const valorConsumo = Number(consumo.replace(',', '.'))
+    const potenciaWatts = Number(potencia.replace(',', '.'))
 
     if (nome.trim() === '' || comodo.trim() === '') {
       setErro('Preencha o nome e o cômodo.')
       return
     }
-    if (consumo.trim() === '' || Number.isNaN(valorConsumo) || valorConsumo < 0) {
-      setErro('Informe um consumo válido (ex.: 1,5).')
+    if (potencia.trim() === '' || Number.isNaN(potenciaWatts) || potenciaWatts <= 0) {
+      setErro('Informe uma potência válida, em watts (ex.: 60).')
       return
     }
 
-    if (editandoId === null) {
-      await criarDispositivo({
-        nome: nome.trim(),
-        comodo: comodo.trim(),
-        tipo,
-        ligado: false,
-        consumo: valorConsumo,
-      })
-    } else {
-      const original = lista.find((d) => d.id === editandoId)
-      if (original) {
-        await atualizarDispositivo({
-          ...original,
-          nome: nome.trim(),
-          comodo: comodo.trim(),
-          tipo,
-          consumo: valorConsumo,
-        })
-      }
-    }
+    const dados = { nome: nome.trim(), comodo: comodo.trim(), tipo, potenciaWatts }
 
-    setLista(await listarDispositivos())
-    limpar()
+    setSalvando(true)
+    try {
+      if (editandoId === null) {
+        await criarDispositivo(dados)
+      } else {
+        await atualizarDispositivo(editandoId, dados)
+      }
+      setLista(await listarDispositivos())
+      limpar()
+    } catch (e) {
+      setErro(mensagemDe(e))
+    } finally {
+      setSalvando(false)
+    }
   }
 
   return (
@@ -121,12 +135,12 @@ function Admin() {
             </label>
 
             <label className="campo">
-              Consumo (kWh/dia)
+              Potência (W)
               <input
                 type="text"
                 inputMode="decimal"
-                value={consumo}
-                onChange={(e) => setConsumo(e.target.value)}
+                value={potencia}
+                onChange={(e) => setPotencia(e.target.value)}
               />
             </label>
           </div>
@@ -150,8 +164,8 @@ function Admin() {
           {erro && <p className="auth-erro">{erro}</p>}
 
           <div className="form-acoes">
-            <button type="submit" className="botao botao-form">
-              {editandoId === null ? 'Cadastrar' : 'Salvar alterações'}
+            <button type="submit" className="botao botao-form" disabled={salvando}>
+              {salvando ? 'Salvando...' : editandoId === null ? 'Cadastrar' : 'Salvar alterações'}
             </button>
             {editandoId !== null && (
               <button type="button" className="botao-secundario" onClick={limpar}>
@@ -169,6 +183,7 @@ function Admin() {
               <th>Nome</th>
               <th>Cômodo</th>
               <th>Tipo</th>
+              <th>Potência</th>
               <th>Consumo</th>
               <th>Ações</th>
             </tr>
@@ -181,7 +196,8 @@ function Admin() {
                 <td>
                   <span className="selo">{nomesTipo[d.tipo]}</span>
                 </td>
-                <td>{d.consumo.toLocaleString('pt-BR')} kWh</td>
+                <td>{d.potenciaWatts.toLocaleString('pt-BR')} W</td>
+                <td>{d.consumo.toLocaleString('pt-BR')} kWh/dia</td>
                 <td>
                   <div className="acoes">
                     <button className="btn-icone" onClick={() => editar(d)} aria-label="Editar">
@@ -197,8 +213,13 @@ function Admin() {
           </tbody>
         </table>
 
-        {lista.length === 0 && <p className="tabela-vazia">Nenhum dispositivo cadastrado.</p>}
+        {carregando && <p className="tabela-vazia">Carregando...</p>}
+        {!carregando && lista.length === 0 && (
+          <p className="tabela-vazia">Nenhum dispositivo cadastrado.</p>
+        )}
       </div>
+
+      {!carregando && <Comodos dispositivos={lista} aoRenomear={recarregar} />}
     </div>
   )
 }

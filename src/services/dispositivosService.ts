@@ -1,23 +1,22 @@
-import { dispositivos as dadosIniciais } from '../mocks/dispositivos'
-import type { Dispositivo } from '../types/Dispositivo'
+import type { DadosDispositivo, Dispositivo } from '../types/Dispositivo'
+import { api } from './api'
 
-// "Banco de dados" falso, na memória. Quando a API existir, some daqui.
-let banco: Dispositivo[] = [...dadosIniciais]
-
-export async function listarDispositivos(): Promise<Dispositivo[]> {
-  return [...banco]
+export function listarDispositivos(): Promise<Dispositivo[]> {
+  return api('/dispositivos')
 }
 
-export async function criarDispositivo(dados: Omit<Dispositivo, 'id'>): Promise<Dispositivo> {
-  const novo: Dispositivo = { ...dados, id: Date.now() }
-  banco = [...banco, novo]
-  return novo
+export function criarDispositivo(dados: DadosDispositivo): Promise<Dispositivo> {
+  return api('/dispositivos', 'POST', dados)
 }
 
-export async function atualizarDispositivo(atualizado: Dispositivo): Promise<void> {
-  banco = banco.map((d) => (d.id === atualizado.id ? atualizado : d))
+export function atualizarDispositivo(id: number, dados: DadosDispositivo): Promise<Dispositivo> {
+  return api(`/dispositivos/${id}`, 'PUT', dados)
 }
 
-export async function removerDispositivo(id: number): Promise<void> {
-  banco = banco.filter((d) => d.id !== id)
+export function alterarEstado(id: number, ligado: boolean): Promise<Dispositivo> {
+  return api(`/dispositivos/${id}/estado`, 'PATCH', { ligado })
+}
+
+export function removerDispositivo(id: number): Promise<void> {
+  return api(`/dispositivos/${id}`, 'DELETE')
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Search } from 'lucide-react'
-import { listarDispositivos } from '../services/dispositivosService'
+import { mensagemDe } from '../services/api'
+import { alterarEstado, listarDispositivos } from '../services/dispositivosService'
 import type { Dispositivo } from '../types/Dispositivo'
 
 const tipos = [
@@ -8,6 +10,7 @@ const tipos = [
   { valor: 'luz', rotulo: 'Iluminação' },
   { valor: 'climatizacao', rotulo: 'Climatização' },
   { valor: 'eletro', rotulo: 'Eletrodomésticos' },
+  { valor: 'entretenimento', rotulo: 'Entretenimento' },
 ]
 
 const ordens = [
@@ -28,19 +31,35 @@ function normalizar(texto: string) {
 function Dispositivos() {
   const [lista, setLista] = useState<Dispositivo[]>([])
   const [carregando, setCarregando] = useState(true)
-  const [busca, setBusca] = useState('')
+  const [parametros, setParametros] = useSearchParams()
+  const busca = parametros.get('busca') ?? ''
   const [tipo, setTipo] = useState('todos')
   const [ordem, setOrdem] = useState('nome')
+  const [erro, setErro] = useState('')
+  const [acionando, setAcionando] = useState<number | null>(null)
 
   useEffect(() => {
-    listarDispositivos().then((dados) => {
-      setLista(dados)
-      setCarregando(false)
-    })
+    listarDispositivos()
+      .then(setLista)
+      .catch((e: unknown) => setErro(mensagemDe(e)))
+      .finally(() => setCarregando(false))
   }, [])
 
-  function alternar(id: number) {
-    setLista(lista.map((d) => (d.id === id ? { ...d, ligado: !d.ligado } : d)))
+  function setBusca(texto: string) {
+    setParametros(texto ? { busca: texto } : {}, { replace: true })
+  }
+
+  async function alternar(dispositivo: Dispositivo) {
+    setErro('')
+    setAcionando(dispositivo.id)
+    try {
+      const atualizado = await alterarEstado(dispositivo.id, !dispositivo.ligado)
+      setLista((atual) => atual.map((d) => (d.id === atualizado.id ? atualizado : d)))
+    } catch (e) {
+      setErro(mensagemDe(e))
+    } finally {
+      setAcionando(null)
+    }
   }
 
   const termos = normalizar(busca).split(' ').filter(Boolean)
@@ -102,6 +121,7 @@ function Dispositivos() {
         </div>
       </div>
 
+      {erro && <p className="auth-erro">{erro}</p>}
       {carregando && <p>Carregando...</p>}
       {!carregando && (
         <p className="contagem">
@@ -122,7 +142,8 @@ function Dispositivos() {
 
             <button
               className={d.ligado ? 'toggle ligado' : 'toggle'}
-              onClick={() => alternar(d.id)}
+              onClick={() => alternar(d)}
+              disabled={acionando === d.id}
             >
               {d.ligado ? 'Ligado' : 'Desligado'}
             </button>

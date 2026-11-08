@@ -1,8 +1,11 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Lightbulb, LayoutDashboard, LogOut, MessageCircle, Settings } from 'lucide-react'
-import { usuario } from '../mocks/usuario'
+import { History, Lightbulb, LayoutDashboard, LogOut, MessageCircle, Settings, UserRound } from 'lucide-react'
+import { mensagemDe } from '../services/api'
+import { sair } from '../services/authService'
+import type { Usuario } from '../types/Usuario'
 
 type SidebarProps = {
+  usuario: Usuario
   aberta: boolean
   fechar: () => void
 }
@@ -10,12 +13,23 @@ type SidebarProps = {
 const itens = [
   { to: '/dashboard', rotulo: 'Dashboard', icone: LayoutDashboard },
   { to: '/dispositivos', rotulo: 'Dispositivos', icone: Lightbulb },
+  { to: '/historico', rotulo: 'Histórico', icone: History },
   { to: '/chat', rotulo: 'Chat', icone: MessageCircle },
   { to: '/admin', rotulo: 'Admin', icone: Settings },
+  { to: '/perfil', rotulo: 'Perfil', icone: UserRound },
 ]
 
-function Sidebar({ aberta, fechar }: SidebarProps) {
+function Sidebar({ usuario, aberta, fechar }: SidebarProps) {
   const navigate = useNavigate()
+
+  async function encerrarSessao() {
+    try {
+      await sair()
+      navigate('/login')
+    } catch (e) {
+      window.alert(mensagemDe(e))
+    }
+  }
 
   return (
     <>
@@ -43,7 +57,7 @@ function Sidebar({ aberta, fechar }: SidebarProps) {
             <strong>{usuario.nome}</strong>
             <span>{usuario.email}</span>
           </div>
-          <button className="sair" onClick={() => navigate('/login')} aria-label="Sair">
+          <button className="sair" onClick={encerrarSessao} aria-label="Sair">
             <LogOut size={18} />
           </button>
         </div>

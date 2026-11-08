@@ -11,8 +11,6 @@ function palavrasDe(texto: string) {
 }
 
 export async function enviarMensagem(texto: string): Promise<string> {
-  // Por enquanto SIMULA a IA. Quando o chatbot (OpenAI) estiver pronto,
-  // só esta função muda: ela passa a chamar a API do back-end.
   const ditas = palavrasDe(texto)
   const achada = respostas.find((r) => r.palavras.some((p) => ditas.includes(p)))
 

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { mensagemDe } from '../services/api'
+import { cadastrar } from '../services/authService'
 
 function Cadastro() {
   const navigate = useNavigate()
@@ -9,8 +11,9 @@ function Cadastro() {
   const [senha, setSenha] = useState('')
   const [confirmar, setConfirmar] = useState('')
   const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
 
-  function enviar(evento: FormEvent<HTMLFormElement>) {
+  async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
 
     if (senha.length < 6) {
@@ -23,9 +26,14 @@ function Cadastro() {
     }
 
     setErro('')
-    // Por enquanto só simula. Depois: enviar os dados para a API do back-end.
-    console.log('Cadastro simulado:', { nome, email })
-    navigate('/login')
+    setEnviando(true)
+    try {
+      const usuario = await cadastrar(nome, email, senha)
+      navigate('/login', { state: { cadastradoEmail: usuario.email } })
+    } catch (e) {
+      setErro(mensagemDe(e))
+      setEnviando(false)
+    }
   }
 
   return (
@@ -56,7 +64,9 @@ function Cadastro() {
 
         {erro && <p className="auth-erro">{erro}</p>}
 
-        <button type="submit" className="botao auth-botao">Cadastrar</button>
+        <button type="submit" className="botao auth-botao" disabled={enviando}>
+          {enviando ? 'Cadastrando...' : 'Cadastrar'}
+        </button>
 
         <p className="auth-troca">
           Já tem conta? <Link to="/login">Entrar</Link>

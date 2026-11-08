@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard'
 import Dispositivos from './pages/Dispositivos'
 import Chat from './pages/Chat'
 import Admin from './pages/Admin'
+import Historico from './pages/Historico'
+import Perfil from './pages/Perfil'
 
 function App() {
   return (
@@ -19,7 +21,9 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dispositivos" element={<Dispositivos />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/historico" element={<Historico />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/perfil" element={<Perfil />} />
       </Route>
     </Routes>
   )
